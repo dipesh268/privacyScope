@@ -1,18 +1,18 @@
 package com.example.privacyscope;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -29,25 +29,28 @@ import java.util.Set;
 
 public class ComparisonActivity extends AppCompatActivity {
 
-    private AppInfo app1Info, app2Info;
-    private final List<AppInfo> allApps = new ArrayList<>();
-
     // --- UI Components ---
-    // Selection Part
-    private View selectionLayout;
+    // Selection View
+    private LinearLayout selectionLayout;
     private MaterialCardView selectApp1Button, selectApp2Button;
     private ImageView app1Icon, app2Icon;
     private TextView app1Name, app2Name;
     private Button compareButton;
+    private ProgressBar loadingIndicator;
 
-    // Result Part
+    // Result View
     private View comparisonResultLayout;
     private TextView recommendationText;
     private ImageView resultApp1Icon, resultApp2Icon;
-    private TextView resultApp1Name, resultApp2Name;
-    private TextView resultApp1Score, resultApp2Score;
-    private LinearLayout app1PermissionsLayout, app2PermissionsLayout, app1TrackersLayout, app2TrackersLayout;
+    private TextView resultApp1Name, resultApp2Name, resultApp1Score, resultApp2Score;
+    private LinearLayout app1PermissionsLayout, app2PermissionsLayout;
+    private LinearLayout app1TrackersLayout, app2TrackersLayout;
+    private Button compareNewAppsButton;
 
+
+    // --- Data ---
+    private final List<AppInfo> allApps = new ArrayList<>();
+    private AppInfo appInfo1, appInfo2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +60,11 @@ public class ComparisonActivity extends AppCompatActivity {
         initializeViews();
         setupClickListeners();
         setupBottomNavigation();
-        loadAllApps();
+        loadAllApps(); // Load apps in the background
     }
 
     private void initializeViews() {
-        // Selection Views
+        // Selection View
         selectionLayout = findViewById(R.id.selectionLayout);
         selectApp1Button = findViewById(R.id.selectApp1Button);
         selectApp2Button = findViewById(R.id.selectApp2Button);
@@ -70,8 +73,10 @@ public class ComparisonActivity extends AppCompatActivity {
         app1Name = findViewById(R.id.app1Name);
         app2Name = findViewById(R.id.app2Name);
         compareButton = findViewById(R.id.compareButton);
+        loadingIndicator = findViewById(R.id.loadingIndicator);
 
-        // Result Views
+
+        // Result View
         comparisonResultLayout = findViewById(R.id.comparisonResultLayout);
         recommendationText = findViewById(R.id.recommendationText);
         resultApp1Icon = findViewById(R.id.resultApp1Icon);
@@ -84,6 +89,7 @@ public class ComparisonActivity extends AppCompatActivity {
         app2PermissionsLayout = findViewById(R.id.app2PermissionsLayout);
         app1TrackersLayout = findViewById(R.id.app1TrackersLayout);
         app2TrackersLayout = findViewById(R.id.app2TrackersLayout);
+        compareNewAppsButton = findViewById(R.id.compareNewAppsButton);
     }
 
     private void setupClickListeners() {
@@ -91,7 +97,7 @@ public class ComparisonActivity extends AppCompatActivity {
         selectApp2Button.setOnClickListener(v -> showAppSelectionDialog(2));
 
         compareButton.setOnClickListener(v -> {
-            if (app1Info != null && app2Info != null) {
+            if (appInfo1 != null && appInfo2 != null) {
                 selectionLayout.setVisibility(View.GONE);
                 comparisonResultLayout.setVisibility(View.VISIBLE);
                 performComparison();
@@ -99,47 +105,32 @@ public class ComparisonActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please select two apps to compare.", Toast.LENGTH_SHORT).show();
             }
         });
-    }
 
-    private void showAppSelectionDialog(int requestCode) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = this.getLayoutInflater();
-        View dialogView = inflater.inflate(R.layout.dialog_app_selection, null);
-        builder.setView(dialogView);
-
-        RecyclerView recyclerView = dialogView.findViewById(R.id.dialogRecyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        final AlertDialog dialog = builder.create();
-
-        AppDialogAdapter adapter = new AppDialogAdapter(allApps, app -> {
-            if (app1Info != null && app.getPackageName().equals(app1Info.getPackageName()) ||
-                    app2Info != null && app.getPackageName().equals(app2Info.getPackageName())) {
-                Toast.makeText(this, "This app is already selected.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (requestCode == 1) {
-                app1Info = app;
-                app1Icon.setImageDrawable(app.getIcon());
-                app1Name.setText(app.getAppName());
-            } else {
-                app2Info = app;
-                app2Icon.setImageDrawable(app.getIcon());
-                app2Name.setText(app.getAppName());
-            }
-            compareButton.setEnabled(app1Info != null && app2Info != null);
-            dialog.dismiss();
+        // Add listener for the new button
+        compareNewAppsButton.setOnClickListener(v -> {
+            // Reset the view to the initial selection state
+            selectionLayout.setVisibility(View.VISIBLE);
+            comparisonResultLayout.setVisibility(View.GONE);
+            // Clear selections
+            appInfo1 = null;
+            appInfo2 = null;
+            app1Name.setText("Select App 1");
+            app2Name.setText("Select App 2");
+            app1Icon.setImageResource(R.drawable.ic_add);
+            app2Icon.setImageResource(R.drawable.ic_add);
         });
-
-        recyclerView.setAdapter(adapter);
-        dialog.show();
     }
+
 
     private void loadAllApps() {
+        // Show loading indicator and disable buttons
+        loadingIndicator.setVisibility(View.VISIBLE);
+        selectApp1Button.setEnabled(false);
+        selectApp2Button.setEnabled(false);
+
         new Thread(() -> {
             PackageManager pm = getPackageManager();
-            List<PackageInfo> packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+            List<PackageInfo> packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS);
             allApps.clear();
             for (PackageInfo packageInfo : packages) {
                 if ((packageInfo.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0) {
@@ -147,64 +138,111 @@ public class ComparisonActivity extends AppCompatActivity {
                 }
             }
             Collections.sort(allApps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
+
+            // Update UI on the main thread when loading is complete
+            runOnUiThread(() -> {
+                loadingIndicator.setVisibility(View.GONE);
+                selectApp1Button.setEnabled(true);
+                selectApp2Button.setEnabled(true);
+            });
         }).start();
     }
 
+    private void showAppSelectionDialog(int requestCode) {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_app_selection);
+        RecyclerView recyclerView = dialog.findViewById(R.id.dialogRecyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        AppDialogAdapter dialogAdapter = new AppDialogAdapter(allApps, app -> {
+            if (requestCode == 1) {
+                appInfo1 = app;
+                app1Name.setText(app.getAppName());
+                app1Icon.setImageDrawable(app.getIcon());
+            } else {
+                appInfo2 = app;
+                app2Name.setText(app.getAppName());
+                app2Icon.setImageDrawable(app.getIcon());
+            }
+            dialog.dismiss();
+        });
+        recyclerView.setAdapter(dialogAdapter);
+        dialog.show();
+    }
+
+
     private void performComparison() {
-        // Populate header info
-        resultApp1Icon.setImageDrawable(app1Info.getIcon());
-        resultApp2Icon.setImageDrawable(app2Info.getIcon());
-        resultApp1Name.setText(app1Info.getAppName());
-        resultApp2Name.setText(app2Info.getAppName());
-        resultApp1Score.setText("Score: " + app1Info.getRiskScore());
-        resultApp2Score.setText("Score: " + app2Info.getRiskScore());
+        // --- Populate Header Info ---
+        resultApp1Icon.setImageDrawable(appInfo1.getIcon());
+        resultApp1Name.setText(appInfo1.getAppName());
+        resultApp1Score.setText("Risk: " + appInfo1.getRiskScore());
 
+        resultApp2Icon.setImageDrawable(appInfo2.getIcon());
+        resultApp2Name.setText(appInfo2.getAppName());
+        resultApp2Score.setText("Risk: " + appInfo2.getRiskScore());
 
-        // Clear previous results
+        // --- Clear previous results ---
         app1PermissionsLayout.removeAllViews();
         app2PermissionsLayout.removeAllViews();
         app1TrackersLayout.removeAllViews();
         app2TrackersLayout.removeAllViews();
 
-        // Compare Risk Scores and Set Recommendation
-        if (app1Info.getRiskScore() < app2Info.getRiskScore()) {
-            recommendationText.setText(app1Info.getAppName() + " is safer than " + app2Info.getAppName());
-        } else if (app2Info.getRiskScore() < app1Info.getRiskScore()) {
-            recommendationText.setText(app2Info.getAppName() + " is safer than " + app1Info.getAppName());
-        } else {
-            recommendationText.setText("Both apps have a similar risk profile.");
+        // --- Compare Permissions ---
+        Set<String> app2Permissions = new HashSet<>(appInfo2.getDangerousPermissions());
+        for (String permission : appInfo1.getDangerousPermissions()) {
+            boolean isUnique = !app2Permissions.contains(permission);
+            addTextViewToList(app1PermissionsLayout, permission, isUnique);
         }
 
-        // Compare Permissions
-        Set<String> app1Perms = new HashSet<>(app1Info.getDangerousPermissions());
-        Set<String> app2Perms = new HashSet<>(app2Info.getDangerousPermissions());
-
-        for (String perm : app1Perms) {
-            boolean isUnique = !app2Perms.contains(perm);
-            addTextViewToList(app1PermissionsLayout, perm.substring(perm.lastIndexOf('.') + 1), isUnique);
-        }
-        for (String perm : app2Perms) {
-            boolean isUnique = !app1Perms.contains(perm);
-            addTextViewToList(app2PermissionsLayout, perm.substring(perm.lastIndexOf('.') + 1), isUnique);
+        Set<String> app1Permissions = new HashSet<>(appInfo1.getDangerousPermissions());
+        for (String permission : appInfo2.getDangerousPermissions()) {
+            boolean isUnique = !app1Permissions.contains(permission);
+            addTextViewToList(app2PermissionsLayout, permission, isUnique);
         }
 
-        // Compare Trackers
-        Set<String> app1Trackers = new HashSet<>(app1Info.getDetectedTrackers());
-        Set<String> app2Trackers = new HashSet<>(app2Info.getDetectedTrackers());
-
-        for (String tracker : app1Trackers) {
+        // --- Compare Trackers ---
+        Set<String> app2Trackers = new HashSet<>(appInfo2.getDetectedTrackers());
+        for (String tracker : appInfo1.getDetectedTrackers()) {
             boolean isUnique = !app2Trackers.contains(tracker);
             addTextViewToList(app1TrackersLayout, tracker, isUnique);
         }
-        for (String tracker : app2Trackers) {
+
+        Set<String> app1Trackers = new HashSet<>(appInfo1.getDetectedTrackers());
+        for (String tracker : appInfo2.getDetectedTrackers()) {
             boolean isUnique = !app1Trackers.contains(tracker);
             addTextViewToList(app2TrackersLayout, tracker, isUnique);
         }
+
+        // --- Generate Recommendation ---
+        generateComparisonRecommendation(appInfo1, appInfo2);
+    }
+
+    private void generateComparisonRecommendation(AppInfo app1, AppInfo app2) {
+        String recommendation;
+        if (app1.getRiskScore() < app2.getRiskScore()) {
+            recommendation = app1.getAppName() + " appears to be safer than " + app2.getAppName() + ".";
+        } else if (app2.getRiskScore() < app1.getRiskScore()) {
+            recommendation = app2.getAppName() + " appears to be safer than " + app1.getAppName() + ".";
+        } else {
+            // Scores are equal, decide based on trackers
+            if (app1.getDetectedTrackers().size() < app2.getDetectedTrackers().size()) {
+                recommendation = app1.getAppName() + " may be safer as it has fewer trackers.";
+            } else if (app2.getDetectedTrackers().size() < app1.getDetectedTrackers().size()) {
+                recommendation = app2.getAppName() + " may be safer as it has fewer trackers.";
+            } else {
+                recommendation = "Both apps have a similar privacy risk profile.";
+            }
+        }
+        recommendationText.setText(recommendation);
     }
 
     private void addTextViewToList(LinearLayout layout, String text, boolean isHighlighted) {
         View view = getLayoutInflater().inflate(R.layout.list_item_comparison, layout, false);
         TextView textView = view.findViewById(R.id.itemName);
+
+        // Clean up permission string for display
+        if (text.contains(".")) {
+            text = text.substring(text.lastIndexOf('.') + 1);
+        }
         textView.setText(text);
 
         if (isHighlighted) {
