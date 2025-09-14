@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    tools:context=".ComparisonActivity">
+
+    <!-- This layout contains the initial app selection UI -->
+    <LinearLayout
+        android:id="@+id/selectionLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Compare Apps"
+            android:textSize="24sp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginBottom="32dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- App 1 Selection Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/selectApp1Button"
+                android:layout_width="0dp"
+                android:layout_height="150dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorPrimary"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:id="@+id/app1Icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="?attr/colorPrimary"/>
+
+                    <TextView
+                        android:id="@+id/app1Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select App 1"
+                        android:layout_marginTop="8dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- App 2 Selection Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/selectApp2Button"
+                android:layout_width="0dp"
+                android:layout_height="150dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                app:cardCornerRadius="12dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorPrimary"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <ImageView
+                        android:id="@+id/app2Icon"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="?attr/colorPrimary"/>
+
+                    <TextView
+                        android:id="@+id/app2Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select App 2"
+                        android:layout_marginTop="8dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/compareButton"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="Compare"
+            android:enabled="false"
+            android:layout_marginTop="32dp"/>
+
+    </LinearLayout>
+
+    <!-- This layout contains the comparison results, initially hidden -->
+    <ScrollView
+        android:id="@+id/comparisonResultLayout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/recommendationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/insight_background"
+                android:textColor="?attr/colorOnPrimary"
+                android:textAlignment="center"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="16dp"
+                tools:text="App A is safer than App B"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false">
+
+                <!-- App 1 Details Column -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="8dp">
+
+                    <ImageView
+                        android:id="@+id/resultApp1Icon"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:layout_gravity="center_horizontal"
+                        tools:src="@tools:sample/avatars"/>
+                    <TextView
+                        android:id="@+id/resultApp1Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        tools:text="App 1 Name"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/resultApp1Score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        tools:text="Score: 85"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Permissions" android:fontFamily="sans-serif-medium" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+                    <LinearLayout android:id="@+id/app1PermissionsLayout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trackers" android:fontFamily="sans-serif-medium" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+                    <LinearLayout android:id="@+id/app1TrackersLayout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+                </LinearLayout>
+
+                <!-- App 2 Details Column -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="8dp">
+
+                    <ImageView
+                        android:id="@+id/resultApp2Icon"
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:layout_gravity="center_horizontal"
+                        tools:src="@tools:sample/avatars"/>
+                    <TextView
+                        android:id="@+id/resultApp2Name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        tools:text="App 2 Name"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/resultApp2Score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        tools:text="Score: 40"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Permissions" android:fontFamily="sans-serif-medium" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+                    <LinearLayout android:id="@+id/app2PermissionsLayout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Trackers" android:fontFamily="sans-serif-medium" android:layout_marginTop="16dp" android:layout_marginBottom="8dp"/>
+                    <LinearLayout android:id="@+id/app2TrackersLayout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:menu="@menu/bottom_nav_menu"
+        app:labelVisibilityMode="labeled"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
