@@ -185,7 +185,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:orientation="vertical" />
+                android:background="@drawable/container_border"
+                android:orientation="vertical"
+                android:padding="16dp" />
 
 
             <!-- Recommendations Section -->
@@ -195,7 +197,6 @@
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="Recommendations"
-                android:textColor="?attr/colorOnSurface"
                 android:textSize="18sp" />
 
             <!-- BACKGROUND REMOVED FROM THIS CONTAINER -->
@@ -204,7 +205,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:orientation="vertical" />
+                android:background="@drawable/container_border"
+                android:orientation="vertical"
+                android:padding="16dp" />
 
         </LinearLayout>
     </ScrollView>

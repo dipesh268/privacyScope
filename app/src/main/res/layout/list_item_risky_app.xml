@@ -4,12 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="8dp"
-    android:layout_marginTop="4dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginBottom="4dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="2dp">
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="1dp"
+    app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -23,16 +21,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            tools:srcCompat="@tools:sample/avatars" />
+            tools:src="@tools:sample/avatars" />
 
         <TextView
             android:id="@+id/appName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="#1C1E21"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp"
+            android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@+id/riskChip"
             app:layout_constraintStart_toEndOf="@id/appIcon"
             app:layout_constraintTop_toTopOf="@id/appIcon"
@@ -40,26 +40,27 @@
 
         <TextView
             android:id="@+id/riskScore"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:textColor="#606770"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="14sp"
             app:layout_constraintStart_toEndOf="@id/appIcon"
             app:layout_constraintTop_toBottomOf="@id/appName"
+            app:layout_constraintBottom_toBottomOf="@id/appIcon"
             tools:text="Risk Score: 85" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/riskChip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="High Risk"
-            android:textColor="@color/white"
-            app:chipBackgroundColor="#D32F2F"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:text="High Risk"
+            tools:chipBackgroundColor="@color/risk_high"
+            android:textColor="@color/white"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </com.google.android.material.card.MaterialCardView>
+

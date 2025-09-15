@@ -7,6 +7,5 @@
     android:background="@drawable/insight_background"
     android:padding="16dp"
     android:layout_marginTop="8dp"
-    android:textColor="@color/textColorPrimary"
     android:textSize="16sp"
     tools:text="Maximum privacy risk" />

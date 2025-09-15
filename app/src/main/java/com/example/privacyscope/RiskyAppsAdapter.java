@@ -2,23 +2,28 @@ package com.example.privacyscope;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.chip.Chip;
+
 import java.util.List;
 
 public class RiskyAppsAdapter extends RecyclerView.Adapter<RiskyAppsAdapter.ViewHolder> {
 
-    private final List<AppInfo> appList;
+    private final List<AppInfo> riskyApps;
     private final Context context;
 
-    public RiskyAppsAdapter(List<AppInfo> appList, Context context) {
-        this.appList = appList;
+    public RiskyAppsAdapter(List<AppInfo> riskyApps, Context context) {
+        this.riskyApps = riskyApps;
         this.context = context;
     }
 
@@ -31,14 +36,34 @@ public class RiskyAppsAdapter extends RecyclerView.Adapter<RiskyAppsAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        AppInfo app = appList.get(position);
+        AppInfo app = riskyApps.get(position);
 
+        holder.appIcon.setImageDrawable(app.getIcon());
         holder.appName.setText(app.getAppName());
         holder.riskScore.setText("Risk Score: " + app.getRiskScore());
-        holder.appIcon.setImageDrawable(app.getIcon());
-        holder.riskChip.setText(app.getRiskLevel().name());
 
-        // Set listener to open the detail activity, passing the package name
+        AppInfo.RiskLevel level = app.getRiskLevel();
+        holder.riskChip.setText(level.toString());
+
+        int chipColorRes;
+        switch (level) {
+            case HIGH:
+                chipColorRes = R.color.risk_high;
+                break;
+            case MEDIUM:
+                chipColorRes = R.color.risk_medium;
+                break;
+            default: // LOW
+                chipColorRes = R.color.risk_low;
+                break;
+        }
+
+        // --- THIS IS THE FIX ---
+        // This is a more robust way to set the background color that respects themes.
+        holder.riskChip.setChipBackgroundColor(ColorStateList.valueOf(ContextCompat.getColor(context, chipColorRes)));
+        // --- END OF FIX ---
+
+
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, AppDetailActivity.class);
             intent.putExtra("PACKAGE_NAME", app.getPackageName());
@@ -48,12 +73,13 @@ public class RiskyAppsAdapter extends RecyclerView.Adapter<RiskyAppsAdapter.View
 
     @Override
     public int getItemCount() {
-        return appList.size();
+        return riskyApps.size();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIcon;
-        TextView appName, riskScore;
+        TextView appName;
+        TextView riskScore;
         Chip riskChip;
 
         public ViewHolder(@NonNull View itemView) {
