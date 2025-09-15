@@ -1,5 +1,6 @@
 package com.example.privacyscope;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -10,14 +11,23 @@ import android.os.Environment;
 import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.ChipGroup;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,49 +43,114 @@ public class ReportsActivity extends AppCompatActivity {
 
     private TextView reportContentTextView;
     private Button shareTextButton, sharePdfButton;
+    private ChipGroup reportTypeChipGroup;
+    private MaterialCardView selectAppCard;
+    private ImageView selectedAppIcon;
+    private TextView selectedAppName;
+    private ProgressBar loadingIndicator;
+
+
     private String reportContent;
+    private final List<AppInfo> allApps = new ArrayList<>();
+    private AppInfo selectedAppInfo;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_reports);
 
+        initializeViews();
+        setupListeners();
+        setupBottomNavigation();
+
+        // Start loading the app list. The report will be generated
+        // automatically when this process completes.
+        loadAllApps();
+    }
+
+    private void initializeViews() {
         reportContentTextView = findViewById(R.id.reportContentTextView);
         shareTextButton = findViewById(R.id.shareTextButton);
         sharePdfButton = findViewById(R.id.sharePdfButton);
+        reportTypeChipGroup = findViewById(R.id.reportTypeChipGroup);
+        selectAppCard = findViewById(R.id.selectAppCard);
+        selectedAppIcon = findViewById(R.id.selectedAppIcon);
+        selectedAppName = findViewById(R.id.selectedAppName);
+        loadingIndicator = findViewById(R.id.loadingIndicator);
+    }
 
-        setupBottomNavigation();
-        loadAndGenerateReport();
+    private void setupListeners() {
+        reportTypeChipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (checkedIds.contains(R.id.chipAllApps)) {
+                selectAppCard.setVisibility(View.GONE);
+                loadingIndicator.setVisibility(View.GONE);
+                generateAllAppsReport();
+            } else if (checkedIds.contains(R.id.chipSingleApp)) {
+                selectAppCard.setVisibility(View.VISIBLE);
+                if (selectedAppInfo != null) {
+                    generateSingleAppReport(selectedAppInfo);
+                } else {
+                    reportContentTextView.setText("Please select an app to generate a detailed report.");
+                    reportContent = "";
+                }
+            }
+        });
 
+        selectAppCard.setOnClickListener(v -> showAppSelectionDialog());
         shareTextButton.setOnClickListener(v -> shareReportAsText());
         sharePdfButton.setOnClickListener(v -> shareReportAsPdf());
     }
 
-    private void loadAndGenerateReport() {
-        reportContentTextView.setText("Generating report, please wait...");
+    private void loadAllApps() {
+        selectAppCard.setEnabled(false);
+        loadingIndicator.setVisibility(View.VISIBLE);
+
         new Thread(() -> {
             PackageManager pm = getPackageManager();
             List<PackageInfo> packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS);
-            List<AppInfo> allApps = new ArrayList<>();
-
+            allApps.clear();
             for (PackageInfo packageInfo : packages) {
                 if ((packageInfo.applicationInfo.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0) {
                     allApps.add(new AppInfo(packageInfo, pm));
                 }
             }
-            Collections.sort(allApps, (a1, a2) -> Integer.compare(a2.getRiskScore(), a1.getRiskScore())); // Sort by risk score descending
+            Collections.sort(allApps, (a1, a2) -> a1.getAppName().compareToIgnoreCase(a2.getAppName()));
+
+            // --- THIS IS THE FIX ---
+            // Now that apps are loaded, generate the initial report and enable UI.
+            runOnUiThread(() -> {
+                loadingIndicator.setVisibility(View.GONE);
+                selectAppCard.setEnabled(true);
+                generateAllAppsReport(); // Generate the report *after* loading is complete.
+            });
+            // --- END OF FIX ---
+        }).start();
+    }
+
+
+    private void generateAllAppsReport() {
+        reportContentTextView.setText("Generating summary report...");
+        new Thread(() -> {
+            // Check if allApps is still being loaded
+            if (allApps.isEmpty() && loadingIndicator.getVisibility() == View.VISIBLE) {
+                runOnUiThread(() -> reportContentTextView.setText("Loading app data, please wait..."));
+                return;
+            }
+
+            List<AppInfo> sortedApps = new ArrayList<>(allApps);
+            Collections.sort(sortedApps, (a1, a2) -> Integer.compare(a2.getRiskScore(), a1.getRiskScore()));
 
             StringBuilder sb = new StringBuilder();
-            sb.append("PrivacyScope Security Report\n");
+            sb.append("PrivacyScope - All Apps Summary Report\n");
             sb.append("Generated on: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date())).append("\n");
             sb.append("====================================\n\n");
 
-            for (AppInfo app : allApps) {
+            for (AppInfo app : sortedApps) {
                 sb.append("App: ").append(app.getAppName()).append("\n");
-                sb.append("Risk Score: ").append(app.getRiskScore()).append(" (").append(app.getRiskLevel()).append(")\n");
-                sb.append("Permissions: ").append(app.getDangerousPermissions().isEmpty() ? "None" : app.getDangerousPermissions()).append("\n");
-                sb.append("Trackers: ").append(app.getDetectedTrackers().isEmpty() ? "None" : app.getDetectedTrackers()).append("\n");
-                sb.append("------------------------------------\n");
+                sb.append("  - Risk Score: ").append(app.getRiskScore()).append(" (").append(app.getRiskLevel()).append(")\n");
+                sb.append("  - Permissions: ").append(app.getDangerousPermissions().size()).append("\n");
+                sb.append("  - Trackers: ").append(app.getDetectedTrackers().size()).append("\n\n");
             }
 
             reportContent = sb.toString();
@@ -83,21 +158,76 @@ public class ReportsActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void generateSingleAppReport(AppInfo app) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("PrivacyScope - Single App Detailed Report\n");
+        sb.append("====================================\n\n");
+        sb.append("App Name: ").append(app.getAppName()).append("\n");
+        sb.append("Package: ").append(app.getPackageName()).append("\n");
+        sb.append("Risk Score: ").append(app.getRiskScore()).append(" (").append(app.getRiskLevel()).append(")\n\n");
+
+        sb.append("--- Dangerous Permissions (").append(app.getDangerousPermissions().size()).append(") ---\n");
+        if (app.getDangerousPermissions().isEmpty()) {
+            sb.append("None\n");
+        } else {
+            for (String perm : app.getDangerousPermissions()) {
+                sb.append("- ").append(perm.substring(perm.lastIndexOf('.') + 1)).append("\n");
+            }
+        }
+        sb.append("\n");
+
+        sb.append("--- Trackers Detected (").append(app.getDetectedTrackers().size()).append(") ---\n");
+        if (app.getDetectedTrackers().isEmpty()) {
+            sb.append("None\n");
+        } else {
+            for (String tracker : app.getDetectedTrackers()) {
+                sb.append("- ").append(tracker).append("\n");
+            }
+        }
+        sb.append("\n");
+
+        reportContent = sb.toString();
+        reportContentTextView.setText(reportContent);
+    }
+
+    private void showAppSelectionDialog() {
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_app_selection);
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+
+        RecyclerView recyclerView = dialog.findViewById(R.id.dialogRecyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        AppDialogAdapter dialogAdapter = new AppDialogAdapter(allApps, app -> {
+            selectedAppInfo = app;
+            selectedAppName.setText(app.getAppName());
+            selectedAppIcon.setImageDrawable(app.getIcon());
+            selectedAppIcon.setImageTintList(null);
+            generateSingleAppReport(app);
+            dialog.dismiss();
+        });
+        recyclerView.setAdapter(dialogAdapter);
+        dialog.show();
+    }
+
+
     private void shareReportAsText() {
-        if (reportContent == null || reportContent.isEmpty()) {
-            Toast.makeText(this, "Report is not ready yet.", Toast.LENGTH_SHORT).show();
+        if (reportContent == null || reportContent.isEmpty() || reportContent.startsWith("Please select")) {
+            Toast.makeText(this, "Please generate a report first.", Toast.LENGTH_SHORT).show();
             return;
         }
-        Intent shareIntent = new Intent();
-        shareIntent.setAction(Intent.ACTION_SEND);
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.putExtra(Intent.EXTRA_TEXT, reportContent);
         shareIntent.setType("text/plain");
         startActivity(Intent.createChooser(shareIntent, "Share Report Via"));
     }
 
     private void shareReportAsPdf() {
-        if (reportContent == null || reportContent.isEmpty()) {
-            Toast.makeText(this, "Report is not ready yet.", Toast.LENGTH_SHORT).show();
+        if (reportContent == null || reportContent.isEmpty() || reportContent.startsWith("Please select")) {
+            Toast.makeText(this, "Please generate a report first.", Toast.LENGTH_SHORT).show();
             return;
         }
         File pdfFile = createPdfFromString(reportContent);
