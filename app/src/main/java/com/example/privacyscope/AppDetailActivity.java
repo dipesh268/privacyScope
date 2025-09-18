@@ -1,5 +1,9 @@
 package com.example.privacyscope;
 
+import android.app.AppOpsManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -16,20 +20,25 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class AppDetailActivity extends AppCompatActivity {
 
-    // --- UI Components ---
+    private static final int USAGE_STATS_REQUEST_CODE = 101;
+
     private ImageView appIconImageView;
-    private TextView appNameTextView, appVersionTextView, riskScoreTextView, riskLevelTextView;
+    private TextView appNameTextView, appVersionTextView, riskLevelTextView, appLastUsedTextView;
     private ProgressBar riskProgressBar;
     private LinearLayout permissionsContainer, trackersContainer, insightsContainer, recommendationsContainer;
     private Button managePermissionsButton;
     private ImageView backButton;
+
+    private String currentPackageName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,37 +46,30 @@ public class AppDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_app_detail);
 
         initializeViews();
+        setupClickListeners();
 
-        // --- !! CRASH FIX !! ---
-        // Safely get the package name from the intent that started this activity.
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra("PACKAGE_NAME")) {
-            String packageName = intent.getStringExtra("PACKAGE_NAME");
-            if (packageName != null && !packageName.isEmpty()) {
-                loadAppDetails(packageName);
+            currentPackageName = intent.getStringExtra("PACKAGE_NAME");
+            if (currentPackageName != null && !currentPackageName.isEmpty()) {
+                loadAppDetails(currentPackageName);
             } else {
-                // Handle the case where package name is invalid
                 Toast.makeText(this, "Error: Invalid package name.", Toast.LENGTH_SHORT).show();
-                finish(); // Close the activity
+                finish();
             }
         } else {
-            // Handle the case where the intent is missing necessary data
             Toast.makeText(this, "Error: Could not load app details.", Toast.LENGTH_SHORT).show();
-            finish(); // Close the activity
+            finish();
         }
+    }
 
-
-        backButton.setOnClickListener(v -> finish());
-
-        managePermissionsButton.setOnClickListener(v -> {
-            String packageName = intent.getStringExtra("PACKAGE_NAME");
-            if (packageName != null) {
-                Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                Uri uri = Uri.fromParts("package", packageName, null);
-                settingsIntent.setData(uri);
-                startActivity(settingsIntent);
-            }
-        });
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == USAGE_STATS_REQUEST_CODE) {
+            // After returning from settings, check the permission again and reload details
+            loadAppDetails(currentPackageName);
+        }
     }
 
     private void initializeViews() {
@@ -82,6 +84,19 @@ public class AppDetailActivity extends AppCompatActivity {
         insightsContainer = findViewById(R.id.insightsContainer);
         recommendationsContainer = findViewById(R.id.recommendationsContainer);
         managePermissionsButton = findViewById(R.id.managePermissionsButton);
+        appLastUsedTextView = findViewById(R.id.appLastUsed);
+    }
+
+    private void setupClickListeners() {
+        backButton.setOnClickListener(v -> finish());
+        managePermissionsButton.setOnClickListener(v -> {
+            if (currentPackageName != null) {
+                Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                Uri uri = Uri.fromParts("package", currentPackageName, null);
+                settingsIntent.setData(uri);
+                startActivity(settingsIntent);
+            }
+        });
     }
 
     private void loadAppDetails(String packageName) {
@@ -90,48 +105,89 @@ public class AppDetailActivity extends AppCompatActivity {
             PackageInfo packageInfo = pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS | PackageManager.GET_RECEIVERS);
             AppInfo appInfo = new AppInfo(packageInfo, pm);
 
-            // Populate UI
             appIconImageView.setImageDrawable(appInfo.getIcon());
             appNameTextView.setText(appInfo.getAppName());
             appVersionTextView.setText("Version " + packageInfo.versionName);
 
-            // Display Risk Score and Heatmap
+            updateRiskColors(appInfo.getRiskLevel());
             riskProgressBar.setProgress(appInfo.getRiskScore());
             riskLevelTextView.setText(appInfo.getRiskLevel().toString());
-            updateRiskColors(appInfo.getRiskLevel());
+
+            // Check for permission to show the stable "last used app" feature
+            if (hasUsageStatsPermission()) {
+                fetchAndDisplayAppLastUsedTime(appInfo);
+            } else {
+                addPermissionPrompt();
+                appLastUsedTextView.setVisibility(View.GONE);
+            }
 
             displayPermissions(appInfo.getDangerousPermissions());
             displayTrackers(appInfo.getDetectedTrackers());
             displayInsightsAndRecommendations(appInfo);
 
         } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
             Toast.makeText(this, "App information not found.", Toast.LENGTH_SHORT).show();
             finish();
         }
     }
 
+    private void fetchAndDisplayAppLastUsedTime(AppInfo appInfo) {
+        UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
+        long time = System.currentTimeMillis();
+        long startTime = time - (1000L * 3600 * 24 * 30); // 30 days ago
+        List<UsageStats> appList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, time);
 
-    private void updateRiskColors(AppInfo.RiskLevel level) {
-        int colorRes;
-        Drawable progressDrawable;
-
-        switch (level) {
-            case HIGH:
-                colorRes = R.color.risk_high;
-                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_high_risk);
-                break;
-            case MEDIUM:
-                colorRes = R.color.risk_medium;
-                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_medium_risk);
-                break;
-            default: // LOW
-                colorRes = R.color.risk_low;
-                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_low_risk);
-                break;
+        if (appList != null && appList.size() > 0) {
+            long lastTimeUsed = 0;
+            for (UsageStats usageStats : appList) {
+                if (usageStats.getPackageName().equals(currentPackageName)) {
+                    if (usageStats.getLastTimeUsed() > lastTimeUsed) {
+                        lastTimeUsed = usageStats.getLastTimeUsed();
+                    }
+                }
+            }
+            appInfo.setLastTimeUsed(lastTimeUsed);
         }
-        riskLevelTextView.setTextColor(ContextCompat.getColor(this, colorRes));
-        riskProgressBar.setProgressDrawable(progressDrawable);
+
+        if (appInfo.getLastTimeUsed() > 0) {
+            appLastUsedTextView.setText("App last used: " + formatTimeAgo(appInfo.getLastTimeUsed()));
+            appLastUsedTextView.setVisibility(View.VISIBLE);
+        } else {
+            appLastUsedTextView.setText("App not used in the last 30 days");
+            appLastUsedTextView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void addPermissionPrompt() {
+        View promptView = findViewById(R.id.usagePermissionPrompt);
+        if (promptView != null) {
+            promptView.setVisibility(View.VISIBLE);
+            Button grantButton = promptView.findViewById(R.id.grantUsagePermissionButton);
+            grantButton.setOnClickListener(v -> {
+                Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                startActivityForResult(intent, USAGE_STATS_REQUEST_CODE);
+            });
+        }
+    }
+
+    private boolean hasUsageStatsPermission() {
+        AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getPackageName());
+        return mode == AppOpsManager.MODE_ALLOWED;
+    }
+
+    private String formatTimeAgo(long timestamp) {
+        long now = System.currentTimeMillis();
+        long diff = now - timestamp;
+
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(diff);
+        if (seconds < 60) return "Just now";
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+        if (minutes < 60) return minutes + " min ago";
+        long hours = TimeUnit.MILLISECONDS.toHours(diff);
+        if (hours < 24) return hours + " hours ago";
+        long days = TimeUnit.MILLISECONDS.toDays(diff);
+        return days + " days ago";
     }
 
     private void displayPermissions(List<String> permissions) {
@@ -156,6 +212,28 @@ public class AppDetailActivity extends AppCompatActivity {
         }
     }
 
+    private void updateRiskColors(AppInfo.RiskLevel level) {
+        int colorRes;
+        Drawable progressDrawable;
+
+        switch (level) {
+            case HIGH:
+                colorRes = R.color.risk_high;
+                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_high_risk);
+                break;
+            case MEDIUM:
+                colorRes = R.color.risk_medium;
+                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_medium_risk);
+                break;
+            default: // LOW
+                colorRes = R.color.risk_low;
+                progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_low_risk);
+                break;
+        }
+        riskLevelTextView.setTextColor(ContextCompat.getColor(this, colorRes));
+        riskProgressBar.setProgressDrawable(progressDrawable);
+    }
+
     private void displayTrackers(List<String> trackers) {
         trackersContainer.removeAllViews();
         if (trackers.isEmpty()) {
@@ -178,7 +256,6 @@ public class AppDetailActivity extends AppCompatActivity {
         insightsContainer.removeAllViews();
         recommendationsContainer.removeAllViews();
 
-        // Insights Logic
         if (appInfo.getRiskLevel() == AppInfo.RiskLevel.HIGH) {
             addInsight("This app poses a maximum privacy risk.");
         }
@@ -189,7 +266,6 @@ public class AppDetailActivity extends AppCompatActivity {
             addInsight("Engages in extensive cross-platform tracking.");
         }
 
-        // Recommendations Logic
         if (appInfo.getRiskScore() > 80) {
             addRecommendation("Strongly consider uninstalling.");
         }

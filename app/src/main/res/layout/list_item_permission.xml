@@ -28,5 +28,17 @@
         android:textSize="14sp"
         tools:text="Allows the app to get your precise location." />
 
+    <!-- New TextView for Last Used Time -->
+    <TextView
+        android:id="@+id/permissionLastUsed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/risk_medium"
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:visibility="gone"
+        tools:text="Last used: 2 hours ago"
+        tools:visibility="visible" />
 </LinearLayout>
 
