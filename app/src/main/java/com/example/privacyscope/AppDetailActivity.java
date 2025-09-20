@@ -117,13 +117,16 @@ public class AppDetailActivity extends AppCompatActivity {
             if (hasUsageStatsPermission()) {
                 usagePermissionPrompt.setVisibility(View.GONE);
                 fetchAndDisplayAppLastUsedTime(appInfo);
-                appInfo.fetchPermissionUsage(this);
+                new Thread(() -> {
+                    appInfo.fetchPermissionUsage(this);
+                    runOnUiThread(() -> displayPermissions(appInfo.getDangerousPermissions(), appInfo.getPermissionUsage()));
+                }).start();
             } else {
                 appLastUsedTextView.setVisibility(View.GONE);
                 addPermissionPrompt();
+                displayPermissions(appInfo.getDangerousPermissions(), appInfo.getPermissionUsage());
             }
 
-            displayPermissions(appInfo.getDangerousPermissions(), appInfo.getPermissionUsage());
             displayTrackers(appInfo.getDetectedTrackers());
             displayInsightsAndRecommendations(appInfo);
 
@@ -192,37 +195,44 @@ public class AppDetailActivity extends AppCompatActivity {
         return days + " days ago";
     }
 
-    private void displayPermissions(List<String> permissions, Map<String, Long> usageMap) {
+    private void displayPermissions(List<AppInfo.PermissionDetail> permissions, Map<String, Long> usageMap) {
         permissionsContainer.removeAllViews();
         if (permissions.isEmpty()) {
             TextView noItems = new TextView(this);
-            noItems.setText("No dangerous permissions found.");
+            noItems.setText("No dangerous permissions requested.");
             noItems.setTextColor(ContextCompat.getColor(this, R.color.textColorSecondary));
             noItems.setPadding(16, 16, 16, 16);
             permissionsContainer.addView(noItems);
             return;
         }
 
-        for (String permission : permissions) {
+        for (AppInfo.PermissionDetail permissionDetail : permissions) {
             View permissionView = getLayoutInflater().inflate(R.layout.list_item_permission, permissionsContainer, false);
             TextView permissionName = permissionView.findViewById(R.id.permissionName);
             TextView permissionDescription = permissionView.findViewById(R.id.permissionDescription);
             TextView permissionLastUsed = permissionView.findViewById(R.id.permissionLastUsed);
 
+            String permission = permissionDetail.name;
             permissionName.setText(permission.substring(permission.lastIndexOf('.') + 1));
             permissionDescription.setText(getPermissionExplanation(permission));
 
-            if(hasUsageStatsPermission()) {
-                Long lastUsedTimestamp = usageMap.get(permission);
-                if (lastUsedTimestamp != null && lastUsedTimestamp > 0) {
-                    permissionLastUsed.setText("Last used: " + formatTimeAgo(lastUsedTimestamp));
-                    permissionLastUsed.setVisibility(View.VISIBLE);
+            if (permissionDetail.isGranted) {
+                if (hasUsageStatsPermission()) {
+                    Long lastUsedTimestamp = usageMap.get(permission);
+                    if (lastUsedTimestamp != null && lastUsedTimestamp > 0) {
+                        permissionLastUsed.setText("Last used: " + formatTimeAgo(lastUsedTimestamp));
+                        permissionLastUsed.setVisibility(View.VISIBLE);
+                    } else {
+                        permissionLastUsed.setText("Usage data not available from Android OS");
+                        permissionLastUsed.setTextColor(ContextCompat.getColor(this, R.color.textColorSecondary));
+                        permissionLastUsed.setVisibility(View.VISIBLE);
+                    }
                 } else {
-                    permissionLastUsed.setText("Usage data not available from Android OS");
-                    permissionLastUsed.setTextColor(ContextCompat.getColor(this, R.color.textColorSecondary));
-                    permissionLastUsed.setVisibility(View.VISIBLE);
+                    permissionLastUsed.setVisibility(View.GONE);
                 }
             } else {
+                permissionName.setTextColor(ContextCompat.getColor(this, R.color.risk_high));
+                permissionDescription.setText(permissionDescription.getText() + " (Not granted)");
                 permissionLastUsed.setVisibility(View.GONE);
             }
 
@@ -275,23 +285,23 @@ public class AppDetailActivity extends AppCompatActivity {
         recommendationsContainer.removeAllViews();
 
         if (appInfo.getRiskLevel() == AppInfo.RiskLevel.HIGH) {
-            addInsight("This app poses a maximum privacy risk.");
+            addInsight("This app poses a maximum privacy risk based on its requested permissions.");
         }
         if (appInfo.getDangerousPermissions().size() > 4) {
-            addInsight("Accesses a wide range of device capabilities.");
+            addInsight("Requests access to a wide range of sensitive device capabilities.");
         }
         if (appInfo.getDetectedTrackers().size() > 3) {
             addInsight("Engages in extensive cross-platform tracking.");
         }
 
         if (appInfo.getRiskScore() > 80) {
-            addRecommendation("Strongly consider uninstalling.");
+            addRecommendation("Strongly consider if this app is trustworthy.");
         }
         if (appInfo.getDetectedTrackers().size() > 0) {
             addRecommendation("Use a web version if available to limit tracking.");
         }
         if (appInfo.getDangerousPermissions().size() > 0) {
-            addRecommendation("Revoke all unnecessary permissions.");
+            addRecommendation("Review and revoke any permissions you are not comfortable with.");
         }
     }
 

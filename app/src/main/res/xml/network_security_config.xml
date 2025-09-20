@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        This is the definitive fix for the "Could not connect" error.
+        It tells the Android system to explicitly trust the f-droid.org domain,
+        bypassing modern network security restrictions.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">f-droid.org</domain>
+    </domain-config>
+</network-security-config>

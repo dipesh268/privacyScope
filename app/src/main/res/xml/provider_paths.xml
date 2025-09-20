@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-files-path name="external_files" path="."/>
+    <!--
+        This file securely defines the location where your app can save temporary
+        files (like PDF reports) that you want to share with other apps.
+    -->
+    <external-path name="external_files" path="."/>
 </paths>
+

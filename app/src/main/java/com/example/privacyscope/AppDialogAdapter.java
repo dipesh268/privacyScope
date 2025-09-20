@@ -11,7 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-public class AppDialogAdapter extends RecyclerView.Adapter<AppDialogAdapter.AppViewHolder> {
+public class AppDialogAdapter extends RecyclerView.Adapter<AppDialogAdapter.ViewHolder> {
 
     private final List<AppInfo> appList;
     private final OnAppSelectedListener listener;
@@ -27,15 +27,17 @@ public class AppDialogAdapter extends RecyclerView.Adapter<AppDialogAdapter.AppV
 
     @NonNull
     @Override
-    public AppViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item_dialog_app, parent, false);
-        return new AppViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull AppViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AppInfo app = appList.get(position);
-        holder.bind(app, listener);
+        holder.appName.setText(app.getAppName());
+        holder.appIcon.setImageDrawable(app.getIcon());
+        holder.itemView.setOnClickListener(v -> listener.onAppSelected(app));
     }
 
     @Override
@@ -43,20 +45,15 @@ public class AppDialogAdapter extends RecyclerView.Adapter<AppDialogAdapter.AppV
         return appList.size();
     }
 
-    static class AppViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView appIcon;
         TextView appName;
 
-        AppViewHolder(@NonNull View itemView) {
+        public ViewHolder(@NonNull View itemView) {
             super(itemView);
             appIcon = itemView.findViewById(R.id.dialogAppIcon);
             appName = itemView.findViewById(R.id.dialogAppName);
         }
-
-        void bind(final AppInfo app, final OnAppSelectedListener listener) {
-            appIcon.setImageDrawable(app.getIcon());
-            appName.setText(app.getAppName());
-            itemView.setOnClickListener(v -> listener.onAppSelected(app));
-        }
     }
 }
+

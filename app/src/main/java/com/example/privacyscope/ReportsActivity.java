@@ -170,8 +170,9 @@ public class ReportsActivity extends AppCompatActivity {
         if (app.getDangerousPermissions().isEmpty()) {
             sb.append("None\n");
         } else {
-            for (String perm : app.getDangerousPermissions()) {
-                sb.append("- ").append(perm.substring(perm.lastIndexOf('.') + 1)).append("\n");
+            for (AppInfo.PermissionDetail permDetail : app.getDangerousPermissions()) {
+                String permName = permDetail.name; // Get the permission name string
+                sb.append("  - ").append(permName.substring(permName.lastIndexOf('.') + 1)).append("\n");
             }
         }
         sb.append("\n");

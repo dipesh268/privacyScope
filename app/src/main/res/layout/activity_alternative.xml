@@ -7,7 +7,7 @@
     android:background="?attr/colorSurface"
     tools:context=".AlternativeActivity">
 
-    <!-- This layout contains the app selection card -->
+    <!-- This layout contains the initial app selection card -->
     <LinearLayout
         android:id="@+id/selectionLayout"
         android:layout_width="0dp"
@@ -33,10 +33,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Select an app to find privacy-focused alternatives from a live online database."
+            android:text="Select an app to find privacy-focused alternatives from trusted online sources."
             android:textAlignment="center"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="16sp" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <ProgressBar
             android:id="@+id/loadingIndicator"
@@ -48,25 +47,26 @@
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/selectAppButton"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:layout_marginTop="32dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
             android:clickable="true"
             android:focusable="true"
-            app:cardCornerRadius="24dp"
+            app:cardCornerRadius="16dp"
             app:strokeColor="?attr/colorPrimary"
             app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:orientation="vertical">
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
                 <ImageView
                     android:id="@+id/selectedAppIcon"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
                     android:src="@drawable/ic_add"
                     app:tint="?attr/colorPrimary" />
 
@@ -74,12 +74,13 @@
                     android:id="@+id/selectedAppName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginStart="16dp"
                     android:text="Select an App"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp" />
+                    android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 
     <!-- This layout contains the results and is initially hidden -->
@@ -88,7 +89,6 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:orientation="vertical"
-        android:padding="16dp"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
         app:layout_constraintEnd_toEndOf="parent"
@@ -97,24 +97,25 @@
         tools:visibility="visible">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/resultsTitle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Recommended Alternatives"
+            android:padding="16dp"
+            android:textAlignment="center"
             android:textColor="?attr/colorOnSurface"
-            android:textSize="22sp" />
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-medium"
+            tools:text="Alternatives for WhatsApp" />
 
-        <!-- THIS IS THE MISSING PROGRESS BAR -->
         <ProgressBar
             android:id="@+id/resultsLoadingIndicator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="48dp"
-            android:visibility="gone"/>
+            android:layout_marginTop="32dp"
+            android:visibility="gone" />
 
-        <!-- THIS IS THE MISSING ERROR VIEW -->
+        <!-- THIS IS THE NEW ERROR HANDLING UI -->
         <LinearLayout
             android:id="@+id/errorLayout"
             android:layout_width="match_parent"
@@ -122,38 +123,46 @@
             android:orientation="vertical"
             android:gravity="center"
             android:padding="32dp"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:src="@drawable/ic_scan"
+                app:tint="?attr/colorError" />
 
             <TextView
                 android:id="@+id/errorMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginTop="16dp"
                 android:textAlignment="center"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="16sp"
-                tools:text="Could not connect to the internet. Please check your connection and try again."/>
+                tools:text="Could not connect. Please check your internet connection." />
 
             <Button
                 android:id="@+id/tryAgainButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Try Again"/>
+                android:text="Try Again" />
         </LinearLayout>
 
 
         <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="0dp"
+            android:layout_weight="1">
 
             <LinearLayout
                 android:id="@+id/alternativesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:padding="16dp" />
         </ScrollView>
+
     </LinearLayout>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
@@ -170,3 +179,4 @@
         app:menu="@menu/bottom_nav_menu" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+

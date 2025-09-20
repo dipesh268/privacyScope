@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ComparisonActivity extends AppCompatActivity {
 
@@ -172,9 +173,14 @@ public class ComparisonActivity extends AppCompatActivity {
         app2ResultScore.setText("Risk: " + appInfo2.getRiskScore());
 
         // Compare permissions
-        Set<String> app1Perms = new HashSet<>(appInfo1.getDangerousPermissions());
-        Set<String> app2Perms = new HashSet<>(appInfo2.getDangerousPermissions());
-        compareAndDisplayLists(app1PermissionsLayout, app1Perms, app2Perms);
+        // Compare permissions
+        Set<String> app1Perms = appInfo1.getDangerousPermissions().stream()
+                .map(detail -> detail.name)
+                .collect(Collectors.toSet());
+
+        Set<String> app2Perms = appInfo2.getDangerousPermissions().stream()
+                .map(detail -> detail.name)
+                .collect(Collectors.toSet());compareAndDisplayLists(app1PermissionsLayout, app1Perms, app2Perms);
         compareAndDisplayLists(app2PermissionsLayout, app2Perms, app1Perms);
 
         // Compare trackers
