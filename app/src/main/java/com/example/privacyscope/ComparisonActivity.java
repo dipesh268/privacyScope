@@ -258,6 +258,12 @@ public class ComparisonActivity extends AppCompatActivity {
                 finish();
                 return true;
             }
+            else if (itemId == R.id.nav_alternatives) {
+                startActivity(new Intent(getApplicationContext(), AlternativeActivity.class));
+                overridePendingTransition(0, 0);
+                finish();
+                return true;
+            }
             return false;
         });
     }

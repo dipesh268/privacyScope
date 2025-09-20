@@ -13,7 +13,12 @@
         android:icon="@drawable/ic_compare"
         android:title="Comparison" />
     <item
+        android:id="@+id/nav_alternatives"
+        android:icon="@drawable/ic_alternative"
+        android:title="Alternatives" />
+    <item
         android:id="@+id/nav_reports"
         android:icon="@drawable/ic_reports"
         android:title="Reports" />
+
 </menu>

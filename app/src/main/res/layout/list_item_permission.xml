@@ -15,30 +15,31 @@
         android:id="@+id/permissionName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="16sp"
-        android:fontFamily="sans-serif-medium"
+        android:textStyle="bold"
         tools:text="ACCESS_FINE_LOCATION" />
 
     <TextView
         android:id="@+id/permissionDescription"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="#606770"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:textSize="14sp"
-        tools:text="Allows the app to get your precise location." />
+        tools:text="Allows the app to get your precise location using GPS." />
 
-    <!-- New TextView for Last Used Time -->
+    <!-- This TextView will only be visible if usage data is found -->
     <TextView
         android:id="@+id/permissionLastUsed"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="@color/risk_medium"
-        android:textSize="12sp"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="14sp"
         android:textStyle="italic"
         android:visibility="gone"
         tools:text="Last used: 2 hours ago"
         tools:visibility="visible" />
+
 </LinearLayout>
 

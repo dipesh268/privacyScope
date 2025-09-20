@@ -11,7 +11,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -25,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class AppDetailActivity extends AppCompatActivity {
@@ -37,6 +37,7 @@ public class AppDetailActivity extends AppCompatActivity {
     private LinearLayout permissionsContainer, trackersContainer, insightsContainer, recommendationsContainer;
     private Button managePermissionsButton;
     private ImageView backButton;
+    private View usagePermissionPrompt;
 
     private String currentPackageName;
 
@@ -67,7 +68,6 @@ public class AppDetailActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == USAGE_STATS_REQUEST_CODE) {
-            // After returning from settings, check the permission again and reload details
             loadAppDetails(currentPackageName);
         }
     }
@@ -85,6 +85,7 @@ public class AppDetailActivity extends AppCompatActivity {
         recommendationsContainer = findViewById(R.id.recommendationsContainer);
         managePermissionsButton = findViewById(R.id.managePermissionsButton);
         appLastUsedTextView = findViewById(R.id.appLastUsed);
+        usagePermissionPrompt = findViewById(R.id.usagePermissionPrompt);
     }
 
     private void setupClickListeners() {
@@ -113,15 +114,16 @@ public class AppDetailActivity extends AppCompatActivity {
             riskProgressBar.setProgress(appInfo.getRiskScore());
             riskLevelTextView.setText(appInfo.getRiskLevel().toString());
 
-            // Check for permission to show the stable "last used app" feature
             if (hasUsageStatsPermission()) {
+                usagePermissionPrompt.setVisibility(View.GONE);
                 fetchAndDisplayAppLastUsedTime(appInfo);
+                appInfo.fetchPermissionUsage(this);
             } else {
-                addPermissionPrompt();
                 appLastUsedTextView.setVisibility(View.GONE);
+                addPermissionPrompt();
             }
 
-            displayPermissions(appInfo.getDangerousPermissions());
+            displayPermissions(appInfo.getDangerousPermissions(), appInfo.getPermissionUsage());
             displayTrackers(appInfo.getDetectedTrackers());
             displayInsightsAndRecommendations(appInfo);
 
@@ -134,10 +136,10 @@ public class AppDetailActivity extends AppCompatActivity {
     private void fetchAndDisplayAppLastUsedTime(AppInfo appInfo) {
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
         long time = System.currentTimeMillis();
-        long startTime = time - (1000L * 3600 * 24 * 30); // 30 days ago
+        long startTime = time - (1000L * 3600 * 24 * 30);
         List<UsageStats> appList = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, time);
 
-        if (appList != null && appList.size() > 0) {
+        if (appList != null && !appList.isEmpty()) {
             long lastTimeUsed = 0;
             for (UsageStats usageStats : appList) {
                 if (usageStats.getPackageName().equals(currentPackageName)) {
@@ -159,10 +161,9 @@ public class AppDetailActivity extends AppCompatActivity {
     }
 
     private void addPermissionPrompt() {
-        View promptView = findViewById(R.id.usagePermissionPrompt);
-        if (promptView != null) {
-            promptView.setVisibility(View.VISIBLE);
-            Button grantButton = promptView.findViewById(R.id.grantUsagePermissionButton);
+        if (usagePermissionPrompt != null) {
+            usagePermissionPrompt.setVisibility(View.VISIBLE);
+            Button grantButton = usagePermissionPrompt.findViewById(R.id.grantUsagePermissionButton);
             grantButton.setOnClickListener(v -> {
                 Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
                 startActivityForResult(intent, USAGE_STATS_REQUEST_CODE);
@@ -177,6 +178,7 @@ public class AppDetailActivity extends AppCompatActivity {
     }
 
     private String formatTimeAgo(long timestamp) {
+        if (timestamp == 0) return "Not used recently";
         long now = System.currentTimeMillis();
         long diff = now - timestamp;
 
@@ -190,7 +192,7 @@ public class AppDetailActivity extends AppCompatActivity {
         return days + " days ago";
     }
 
-    private void displayPermissions(List<String> permissions) {
+    private void displayPermissions(List<String> permissions, Map<String, Long> usageMap) {
         permissionsContainer.removeAllViews();
         if (permissions.isEmpty()) {
             TextView noItems = new TextView(this);
@@ -205,9 +207,25 @@ public class AppDetailActivity extends AppCompatActivity {
             View permissionView = getLayoutInflater().inflate(R.layout.list_item_permission, permissionsContainer, false);
             TextView permissionName = permissionView.findViewById(R.id.permissionName);
             TextView permissionDescription = permissionView.findViewById(R.id.permissionDescription);
+            TextView permissionLastUsed = permissionView.findViewById(R.id.permissionLastUsed);
 
             permissionName.setText(permission.substring(permission.lastIndexOf('.') + 1));
             permissionDescription.setText(getPermissionExplanation(permission));
+
+            if(hasUsageStatsPermission()) {
+                Long lastUsedTimestamp = usageMap.get(permission);
+                if (lastUsedTimestamp != null && lastUsedTimestamp > 0) {
+                    permissionLastUsed.setText("Last used: " + formatTimeAgo(lastUsedTimestamp));
+                    permissionLastUsed.setVisibility(View.VISIBLE);
+                } else {
+                    permissionLastUsed.setText("Usage data not available from Android OS");
+                    permissionLastUsed.setTextColor(ContextCompat.getColor(this, R.color.textColorSecondary));
+                    permissionLastUsed.setVisibility(View.VISIBLE);
+                }
+            } else {
+                permissionLastUsed.setVisibility(View.GONE);
+            }
+
             permissionsContainer.addView(permissionView);
         }
     }
@@ -225,7 +243,7 @@ public class AppDetailActivity extends AppCompatActivity {
                 colorRes = R.color.risk_medium;
                 progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_medium_risk);
                 break;
-            default: // LOW
+            default:
                 colorRes = R.color.risk_low;
                 progressDrawable = ContextCompat.getDrawable(this, R.drawable.progress_bar_low_risk);
                 break;
@@ -304,4 +322,3 @@ public class AppDetailActivity extends AppCompatActivity {
         }
     }
 }
-

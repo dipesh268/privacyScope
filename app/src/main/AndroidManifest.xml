@@ -4,11 +4,11 @@
     <!-- Add this permission to query all installed apps -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
-        tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- Special permission required to get permission usage stats -->
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="QueryAllPackagesPermission" /> <!-- Special permission required to get permission usage stats -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -19,6 +19,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PrivacyScope">
+        <activity
+            android:name=".AlternativeActivity"
+            android:exported="false" />
         <activity
             android:name=".ReportsActivity"
             android:exported="false" />
@@ -41,9 +44,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity" />
-
-        <!-- FileProvider for sharing PDFs securely -->
+        <activity android:name=".MainActivity" /> <!-- FileProvider for sharing PDFs securely -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
